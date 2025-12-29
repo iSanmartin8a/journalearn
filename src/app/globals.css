@@ -1,26 +1,113 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* 🌤️ Sand — claro, calmado */
+.theme-sand {
+  --theme-bg: #e9ecef;
+  --theme-title: #141619;
+  --theme-label: #2b2e34;
+  --theme-placeholder: #6c757d;
+  --theme-invalid: #d64545;
+  --theme-valid: #2f9e44;
+  --theme-button: #d6b885;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* 🌑 Night — oscuro elegante */
+.theme-night {
+  --theme-bg: #141619;
+  --theme-title: #e9ecef;
+  --theme-label: #cfd3da;
+  --theme-placeholder: #8a8f98;
+  --theme-invalid: #ff6b6b;
+  --theme-valid: #51cf66;
+  --theme-button: #fdf0d5;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* 🌿 Forest — natural */
+.theme-forest {
+  --theme-bg: #0f1f17;
+  --theme-title: #e6f4ea;
+  --theme-label: #b7d1c3;
+  --theme-placeholder: #7fa38d;
+  --theme-invalid: #f87171;
+  --theme-valid: #4ade80;
+  --theme-button: #22c55e;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 🌌 Cosmic — creativo */
+.theme-cosmic {
+  --theme-bg: #0b0d17;
+  --theme-title: #e0e7ff;
+  --theme-label: #c7d2fe;
+  --theme-placeholder: #818cf8;
+  --theme-invalid: #fb7185;
+  --theme-valid: #38bdf8;
+  --theme-button: #6366f1;
+}
+
+/* 🌅 Sunrise — cálido */
+.theme-sunrise {
+  --theme-bg: #fff3e0;
+  --theme-title: #4e342e;
+  --theme-label: #6d4c41;
+  --theme-placeholder: #a1887f;
+  --theme-invalid: #e53935;
+  --theme-valid: #43a047;
+  --theme-button: #ffb74d;
+}
+
+/* ❄️ Frost — frío y limpio */
+.theme-frost {
+  --theme-bg: #f1f5f9;
+  --theme-title: #0f172a;
+  --theme-label: #334155;
+  --theme-placeholder: #64748b;
+  --theme-invalid: #ef4444;
+  --theme-valid: #22c55e;
+  --theme-button: #38bdf8;
+}
+
+/* 🌸 Sakura — suave */
+.theme-sakura {
+  --theme-bg: #fff1f2;
+  --theme-title: #881337;
+  --theme-label: #9d174d;
+  --theme-placeholder: #c026d3;
+  --theme-invalid: #be123c;
+  --theme-valid: #16a34a;
+  --theme-button: #fb7185;
+}
+
+/* 🧪 Neon — moderno */
+.theme-neon {
+  --theme-bg: #020617;
+  --theme-title: #e0f2fe;
+  --theme-label: #7dd3fc;
+  --theme-placeholder: #38bdf8;
+  --theme-invalid: #f43f5e;
+  --theme-valid: #4ade80;
+  --theme-button: #22d3ee;
+}
+
+/* 📜 Vintage — retro */
+.theme-vintage {
+  --theme-bg: #f5f1e8;
+  --theme-title: #3e2723;
+  --theme-label: #5d4037;
+  --theme-placeholder: #8d6e63;
+  --theme-invalid: #c62828;
+  --theme-valid: #2e7d32;
+  --theme-button: #d7a86e;
+}
+
+/* 🪐 Aurora — etéreo */
+.theme-aurora {
+  --theme-bg: #0a0f1e;
+  --theme-title: #e0f2fe;
+  --theme-label: #bae6fd;
+  --theme-placeholder: #7dd3fc;
+  --theme-invalid: #fb7185;
+  --theme-valid: #5eead4;
+  --theme-button: #818cf8;
 }

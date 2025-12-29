@@ -1,103 +1,175 @@
-import Image from "next/image";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import Input from "@/components/Input/Input";
+import Title from "@/components/Title/Title";
+import Result from "@/components/Result/Result";
+import { UI_MESSAGES } from "@/utils/consts";
+
+const DEBOUNCE_MS = 1200;
+const COOLDOWN_MS = 30_000;
+
+const MIN_CHARS = 50;
+const BUCKET_SIZE = 125;
+const CHECKPOINTS = [50, 250];
+const MIN_CALL_INTERVAL_MS = 1500;
+
+const THEME_STORAGE_KEY = "selected-theme-index";
+const THEMES = [
+  "theme-sand",
+  "theme-night",
+  "theme-forest",
+  "theme-cosmic",
+  "theme-sunrise",
+  "theme-frost",
+  "theme-sakura",
+  "theme-neon",
+  "theme-vintage",
+  "theme-aurora",
+];
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [themeIndex, setThemeIndex] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    const parsed = saved ? Number(saved) : 0;
+    return parsed >= 0 && parsed < THEMES.length ? parsed : 0;
+  });
+  const [text, setText] = useState("");
+  const [uiMessages, setUiMessages] = useState<any>(UI_MESSAGES);
+  const [correctionResult, setCorrectionResult] = useState<any | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+  const debounceRef = useRef<number | null>(null);
+  const lastBucketRef = useRef(0);
+  const lastRequestAtRef = useRef(0);
+  const pendingFetchRef = useRef(false);
+  const prevLenRef = useRef(0);
+
+  /* 🎨 Aplicar tema al <html> */
+  useEffect(() => {
+    const html = document.documentElement;
+    THEMES.forEach((t) => html.classList.remove(t));
+    html.classList.add(THEMES[themeIndex]);
+  }, [themeIndex]);
+
+  useEffect(() => {
+    localStorage.setItem(THEME_STORAGE_KEY, String(themeIndex));
+  }, [themeIndex]);
+
+  const rotateTheme = () => {
+    setThemeIndex((prev) => (prev + 1) % THEMES.length);
+  };
+
+  /* 🌍 Llamada de traducción (stable) */
+  const doTranslateFetch = useCallback(async (currentText: string) => {
+    // throttle: si hay petición pendiente o demasiado reciente, ignora
+    const now = Date.now();
+    if (pendingFetchRef.current) return;
+    if (now - lastRequestAtRef.current < MIN_CALL_INTERVAL_MS) return;
+
+    pendingFetchRef.current = true;
+    try {
+      const res = await fetch("/api/translate_web", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: currentText }),
+      });
+      const data = await res.json();
+      if (data?.ui) setUiMessages(data.ui);
+      lastRequestAtRef.current = Date.now();
+    } catch (err) {
+      console.error("translate fetch error", err);
+    } finally {
+      // pequeña latencia para evitar llamadas back-to-back
+      setTimeout(() => {
+        pendingFetchRef.current = false;
+      }, 300);
+    }
+  }, []);
+
+  /* Evalúa si llamar ahora (cruces de checkpoints o buckets) */
+  const evaluateAndMaybeFetchImmediate = useCallback(
+    (currentText: string) => {
+      const len = currentText.length;
+      const prev = prevLenRef.current;
+      const now = Date.now();
+
+      // No procesar si por debajo del mínimo
+      if (len < MIN_CHARS) {
+        lastBucketRef.current = 0;
+        return;
+      }
+
+      // 1) Checkpoints (50, 250 ...)
+      const crossedCheckpoint = CHECKPOINTS.some(
+        (cp) => prev < cp && len >= cp
+      );
+
+      // 2) Buckets
+      const bucket = Math.floor(len / BUCKET_SIZE);
+      const crossedNewBucket = bucket > lastBucketRef.current;
+
+      // 3) cooldown global: si pasó suficiente tiempo desde la última request
+      const cooldownPassed = now - lastRequestAtRef.current > COOLDOWN_MS;
+
+      // Si cruzó checkpoint o bucket, y no hemos llamado muy recientemente -> llamar
+      if (
+        (crossedCheckpoint || crossedNewBucket || cooldownPassed) &&
+        now - lastRequestAtRef.current > MIN_CALL_INTERVAL_MS
+      ) {
+        lastBucketRef.current = bucket;
+        doTranslateFetch(currentText);
+      }
+    },
+    [doTranslateFetch]
+  );
+
+  /* Debounce de "reposo" (cuando el usuario para de escribir) */
+  const scheduleDebouncedEvaluation = useCallback(
+    (currentText: string) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = window.setTimeout(() => {
+        // Al acabar la escritura, hacemos una llamada si cumple MIN_CHARS
+        if (currentText.length >= MIN_CHARS) {
+          doTranslateFetch(currentText);
+        }
+      }, DEBOUNCE_MS);
+    },
+    [doTranslateFetch]
+  );
+
+  /* Efecto que reacciona al texto en *tiempo real* */
+  useEffect(() => {
+    const len = text.length;
+    // 1) evaluar cruzes inmediatos (no esperamos debounce)
+    evaluateAndMaybeFetchImmediate(text);
+
+    // 2) schedule debounce evaluation (cuando pare)
+    scheduleDebouncedEvaluation(text);
+
+    // 3) almacenar longitud previa
+    prevLenRef.current = len;
+  }, [text, evaluateAndMaybeFetchImmediate, scheduleDebouncedEvaluation]);
+
+  return (
+    <div className="min-h-screen bg-theme-bg text-theme-label transition-colors duration-500 flex flex-col items-center justify-around p-8">
+      <div className="mb-8 cursor-pointer select-none" onClick={rotateTheme}>
+        <Title title={uiMessages.TITLE} tooltip={uiMessages.TOOLTIP} />
+      </div>
+
+      <div className="w-full max-w-2xl">
+        {/* Si ya hay resultado, mostramos corrección. Si quieres poder editar, muestra botón "Edit" que limpia result */}
+        {!correctionResult ? (
+          <Input
+            onTextChange={setText}
+            uiMessages={uiMessages}
+            onSubmitResult={(res) => setCorrectionResult(res)}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        ) : (
+          <Result result={correctionResult} />
+        )}
+      </div>
     </div>
   );
 }

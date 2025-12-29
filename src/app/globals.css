@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+.theme-default {
+  --theme-background: #f8f9fa;
+  --theme-title: #212529;
+  --theme-label: #495057;
+  --theme-placeholder: #6c757d;
+  --theme-invalid: #ff4d4d;
+  --theme-valid: #28a745;
+  --theme-button-background: #212529;
+  --theme-button-text: #E9ECEF;
+  --theme-tooltip-background: #212529;
+  --theme-tooltip-text: #E9ECEF;
+}
+
+.theme-night {
+  --theme-background: #212529;
+  --theme-title: #f8f9fa;
+  --theme-label: #495057;
+  --theme-placeholder: #6c757d;
+  --theme-invalid: #ff4d4d;
+  --theme-valid: #28a745;
+  --theme-button-text: #212529;
+  --theme-button-background: #E9ECEF;
+  --theme-tooltip-text: #212529;
+  --theme-tooltip-background: #E9ECEF;
+}
+
 /* 🌤️ Sand — claro, calmado */
 .theme-sand {
   --theme-bg: #e9ecef;

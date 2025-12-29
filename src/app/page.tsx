@@ -16,18 +16,7 @@ const CHECKPOINTS = [50, 250];
 const MIN_CALL_INTERVAL_MS = 1500;
 
 const THEME_STORAGE_KEY = "selected-theme-index";
-const THEMES = [
-  "theme-sand",
-  "theme-night",
-  "theme-forest",
-  "theme-cosmic",
-  "theme-sunrise",
-  "theme-frost",
-  "theme-sakura",
-  "theme-neon",
-  "theme-vintage",
-  "theme-aurora",
-];
+const THEMES = ["theme-default", "theme-night"];
 
 export default function Home() {
   const [themeIndex, setThemeIndex] = useState(() => {
@@ -43,7 +32,7 @@ export default function Home() {
   const debounceRef = useRef<number | null>(null);
   const lastBucketRef = useRef(0);
   const lastRequestAtRef = useRef(0);
-  const pendingFetchRef = useRef(false);
+  const pendingFetchControllerRef = useRef<AbortController | null>(null);
   const prevLenRef = useRef(0);
 
   /* 🎨 Aplicar tema al <html> */
@@ -61,30 +50,34 @@ export default function Home() {
     setThemeIndex((prev) => (prev + 1) % THEMES.length);
   };
 
-  /* 🌍 Llamada de traducción (stable) */
+  /* 🌍 Llamada de traducción segura con AbortController */
   const doTranslateFetch = useCallback(async (currentText: string) => {
-    // throttle: si hay petición pendiente o demasiado reciente, ignora
     const now = Date.now();
-    if (pendingFetchRef.current) return;
+    if (pendingFetchControllerRef.current) {
+      // abortar cualquier llamada pendiente
+      pendingFetchControllerRef.current.abort();
+    }
     if (now - lastRequestAtRef.current < MIN_CALL_INTERVAL_MS) return;
 
-    pendingFetchRef.current = true;
+    const controller = new AbortController();
+    pendingFetchControllerRef.current = controller;
+
     try {
       const res = await fetch("/api/translate_web", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: currentText }),
+        signal: controller.signal,
       });
       const data = await res.json();
       if (data?.ui) setUiMessages(data.ui);
       lastRequestAtRef.current = Date.now();
-    } catch (err) {
+    } catch (err: any) {
+      if (err.name === "AbortError") return; // llamada cancelada
       console.error("translate fetch error", err);
     } finally {
-      // pequeña latencia para evitar llamadas back-to-back
-      setTimeout(() => {
-        pendingFetchRef.current = false;
-      }, 300);
+      // limpiar el controlador actual
+      pendingFetchControllerRef.current = null;
     }
   }, []);
 
@@ -95,29 +88,26 @@ export default function Home() {
       const prev = prevLenRef.current;
       const now = Date.now();
 
-      // No procesar si por debajo del mínimo
       if (len < MIN_CHARS) {
         lastBucketRef.current = 0;
+        if (pendingFetchControllerRef.current) {
+          pendingFetchControllerRef.current.abort();
+          pendingFetchControllerRef.current = null;
+        }
         return;
       }
 
-      // 1) Checkpoints (50, 250 ...)
       const crossedCheckpoint = CHECKPOINTS.some(
         (cp) => prev < cp && len >= cp
       );
 
-      // 2) Buckets
       const bucket = Math.floor(len / BUCKET_SIZE);
       const crossedNewBucket = bucket > lastBucketRef.current;
 
-      // 3) cooldown global: si pasó suficiente tiempo desde la última request
       const cooldownPassed = now - lastRequestAtRef.current > COOLDOWN_MS;
 
-      // Si cruzó checkpoint o bucket, y no hemos llamado muy recientemente -> llamar
-      if (
-        (crossedCheckpoint || crossedNewBucket || cooldownPassed) &&
-        now - lastRequestAtRef.current > MIN_CALL_INTERVAL_MS
-      ) {
+      if ((crossedCheckpoint || crossedNewBucket || cooldownPassed) &&
+          now - lastRequestAtRef.current > MIN_CALL_INTERVAL_MS) {
         lastBucketRef.current = bucket;
         doTranslateFetch(currentText);
       }
@@ -125,12 +115,11 @@ export default function Home() {
     [doTranslateFetch]
   );
 
-  /* Debounce de "reposo" (cuando el usuario para de escribir) */
+  /* Debounce de "reposo" */
   const scheduleDebouncedEvaluation = useCallback(
     (currentText: string) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = window.setTimeout(() => {
-        // Al acabar la escritura, hacemos una llamada si cumple MIN_CHARS
         if (currentText.length >= MIN_CHARS) {
           doTranslateFetch(currentText);
         }
@@ -139,27 +128,21 @@ export default function Home() {
     [doTranslateFetch]
   );
 
-  /* Efecto que reacciona al texto en *tiempo real* */
+  /* Efecto que reacciona al texto en tiempo real */
   useEffect(() => {
     const len = text.length;
-    // 1) evaluar cruzes inmediatos (no esperamos debounce)
     evaluateAndMaybeFetchImmediate(text);
-
-    // 2) schedule debounce evaluation (cuando pare)
     scheduleDebouncedEvaluation(text);
-
-    // 3) almacenar longitud previa
     prevLenRef.current = len;
   }, [text, evaluateAndMaybeFetchImmediate, scheduleDebouncedEvaluation]);
 
   return (
-    <div className="min-h-screen bg-theme-bg text-theme-label transition-colors duration-500 flex flex-col items-center justify-around p-8">
+    <div className="min-h-screen bg-[var(--theme-background)] text-[var(--theme-label)] transition-colors duration-500 flex flex-col items-center justify-around p-8">
       <div className="mb-8 cursor-pointer select-none" onClick={rotateTheme}>
         <Title title={uiMessages.TITLE} tooltip={uiMessages.TOOLTIP} />
       </div>
 
       <div className="w-full max-w-2xl">
-        {/* Si ya hay resultado, mostramos corrección. Si quieres poder editar, muestra botón "Edit" que limpia result */}
         {!correctionResult ? (
           <Input
             onTextChange={setText}

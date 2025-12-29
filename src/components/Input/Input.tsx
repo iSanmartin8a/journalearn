@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// components/Input/Input.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import RandomReveal from "@/components/RandomReveal/RandomReveal";
 
 type InputProps = {
@@ -16,41 +16,50 @@ type InputProps = {
     MINIMUN: string;
     GOOD: string;
     SUBMIT: string;
+    SHORTCUT: string;
+    OR: string;
+    PROCESSING?: string;
   };
-  onSubmitResult?: (result: any) => void; // callback con el objeto devuelto por la IA
+  onSubmitResult?: (result: any) => void;
 };
 
-export default function Input({ onTextChange, uiMessages, onSubmitResult }: InputProps) {
+export default function Input({
+  onTextChange,
+  uiMessages,
+  onSubmitResult,
+}: InputProps) {
   const [value, setValue] = useState("");
-  const [labelText, setLabelText] = useState(uiMessages?.LABEL ?? "Write your message below.");
-  const [helperStatic, setHelperStatic] = useState(uiMessages?.MINIMUN ?? "Minimum 400 characters");
-  const [goodStatic, setGoodStatic] = useState(uiMessages?.GOOD ?? "All good! ✅");
+  const [labelText, setLabelText] = useState(
+    uiMessages?.LABEL ?? "Write your message below."
+  );
+  const [helperStatic, setHelperStatic] = useState(
+    uiMessages?.MINIMUN ?? "Minimum 400 characters"
+  );
+  const [goodStatic, setGoodStatic] = useState(
+    uiMessages?.GOOD ?? "All good! ✅"
+  );
 
   const minLength = 400;
   const isValid = value.length >= minLength;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Emitir texto al padre
-  useEffect(() => {
-    onTextChange(value);
-  }, [value, onTextChange]);
-
-  // Actualizar textos cuando uiMessages cambian (solo idioma)
-  useEffect(() => {
-    setLabelText(uiMessages?.LABEL ?? "Write your message below.");
-  }, [uiMessages?.LABEL]);
-
-  useEffect(() => {
-    setHelperStatic(uiMessages?.MINIMUN ?? "Minimum 400 characters");
-  }, [uiMessages?.MINIMUN]);
-
-  useEffect(() => {
-    setGoodStatic(uiMessages?.GOOD ?? "All good! ✅");
-  }, [uiMessages?.GOOD]);
+  useEffect(() => onTextChange(value), [value, onTextChange]);
+  useEffect(
+    () => setLabelText(uiMessages?.LABEL ?? "Write your message below."),
+    [uiMessages?.LABEL]
+  );
+  useEffect(
+    () => setHelperStatic(uiMessages?.MINIMUN ?? "Minimum 400 characters"),
+    [uiMessages?.MINIMUN]
+  );
+  useEffect(
+    () => setGoodStatic(uiMessages?.GOOD ?? "All good! ✅"),
+    [uiMessages?.GOOD]
+  );
 
   async function handleSubmit() {
-    if (!isValid) return;
+    if (!isValid || loading) return;
     setError(null);
     setLoading(true);
 
@@ -64,30 +73,33 @@ export default function Input({ onTextChange, uiMessages, onSubmitResult }: Inpu
       const payload = await res.json();
 
       if (!res.ok) {
-        // si la API devuelve error optamos por mostrar mensaje
         console.error("check_journal error:", payload);
         setError(payload?.error ?? "AI service error");
-        // también podemos pasar fallback al padre
+
         onSubmitResult?.({
           language: "unknown",
-          corrected_markdown: value,
-          corrections: [],
-          summary: "Service returned an error.",
+          score: 0,
+          corrected_html: `<p>${value}</p>`,
+          paragraph_feedback: [],
+          overall_feedback:
+            "The text could not be evaluated due to a service error.",
           __raw: payload,
         });
-      } else {
-        // payload.result es la estructura esperada por el endpoint anterior
-        const result = payload?.result ?? payload;
-        onSubmitResult?.(result);
+        return;
       }
+
+      const result = payload?.result ?? payload;
+      onSubmitResult?.(result);
     } catch (err: any) {
       console.error("Network or unexpected error:", err);
       setError(err?.message ?? String(err));
+
       onSubmitResult?.({
         language: "unknown",
-        corrected_markdown: value,
-        corrections: [],
-        summary: "Network error or unexpected error.",
+        score: 0,
+        corrected_html: `<p>${value}</p>`,
+        paragraph_feedback: [],
+        overall_feedback: "A network error occurred. Please try again.",
         __raw: err,
       });
     } finally {
@@ -95,9 +107,18 @@ export default function Input({ onTextChange, uiMessages, onSubmitResult }: Inpu
     }
   }
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit();
+    }
+  }
+
+  const processingMessage = uiMessages?.PROCESSING ?? "Processing...";
+
   return (
     <div className="grid w-full gap-3">
-      <Label htmlFor="message" className="text-theme-label">
+      <Label htmlFor="message" className="text-[var(--theme-label)]">
         <RandomReveal text={labelText} speed={10} />
       </Label>
 
@@ -106,39 +127,61 @@ export default function Input({ onTextChange, uiMessages, onSubmitResult }: Inpu
         placeholder={uiMessages?.PLACEHOLDER ?? "Type your message here."}
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        disabled={loading}
         className={`
-          !h-60 bg-transparent text-theme-label placeholder:text-theme-placeholder
-          ${isValid ? "border-theme-valid" : "border-theme-invalid"}
+          !h-60 bg-[var(--theme-background)] text-[var(--theme-label)] placeholder:text-[var(--theme-placeholder)]
+          border ${
+            isValid
+              ? "border-[var(--theme-valid)]"
+              : "border-[var(--theme-invalid)]"
+          }
         `}
       />
 
-      <div className={`text-sm ${isValid ? "text-theme-valid" : "text-theme-invalid"}`}>
-        {isValid ? (
-          <RandomReveal text={goodStatic} speed={18} />
-        ) : (
-          <div className="flex justify-between items-center">
-            <div className="flex-1">
-              <RandomReveal text={helperStatic} speed={18} />
-            </div>
-            <div className="ml-4 flex-shrink-0 font-mono">
-              {value.length}/{minLength}
-            </div>
-          </div>
-        )}
+      {/* Contador y mensaje — siempre visible */}
+      <div
+        className={`flex justify-between items-center text-sm ${
+          isValid ? "text-[var(--theme-valid)]" : "text-[var(--theme-invalid)]"
+        }`}
+      >
+        <div className="flex-1">
+          <RandomReveal text={isValid ? goodStatic : helperStatic} speed={18} />
+        </div>
+
+        <div className="ml-4 flex-shrink-0 font-mono">
+          {value.length}/{minLength}
+        </div>
       </div>
 
-      {error && <div className="text-sm text-theme-invalid mt-1">{error}</div>}
+      {error && (
+        <div className="text-sm text-[var(--theme-invalid)] mt-1">{error}</div>
+      )}
 
-      <div className="flex justify-end">
+      {/* Mensaje de atajo y botón */}
+      <div className="flex flex-row items-center justify-end mt-2 gap-1 text-[var(--theme-title)]">
+        <span className="text-xs text-[var(--theme-title)]">
+          {uiMessages?.SHORTCUT ?? "Press Ctrl + Enter"}
+        </span>
+
+        <span className="text-xs text-[var(--theme-title)] opacity-70">
+          {uiMessages?.OR.toLowerCase() ?? "or"}
+        </span>
+
         <Button
-          disabled={!isValid || loading}
           onClick={handleSubmit}
-          className={`
-            px-6 py-2 font-bold rounded-md shadow-lg transition-colors
-            ${isValid ? "bg-theme-button text-white hover:opacity-90" : "bg-theme-muted text-theme-label opacity-50 cursor-not-allowed"}
-          `}
+          disabled={!isValid || loading}
+          size="sm"
+          className="flex items-center gap-2 bg-[var(--theme-button-background)] text-[var(--theme-button-text)] hover:opacity-90"
         >
-          {loading ? "Checking..." : (uiMessages?.SUBMIT ?? "Submit")}
+          {loading ? (
+            <>
+              <Spinner />
+              {processingMessage}
+            </>
+          ) : (
+            uiMessages?.SUBMIT ?? "Submit"
+          )}
         </Button>
       </div>
     </div>

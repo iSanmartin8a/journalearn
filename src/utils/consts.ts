@@ -5,5 +5,7 @@ export const UI_MESSAGES = {
     PLACEHOLDER: "Type your journal entry here...",
     MINIMUN: "Minimum 400 characters",
     GOOD: "All good! ✅",
-    SUBMIT: "Submit"
+    SUBMIT: "Submit",
+    SHORTCUT: "Press Ctrl + Enter",
+    OR: "Or",
 };

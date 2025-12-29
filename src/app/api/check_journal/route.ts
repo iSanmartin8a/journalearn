@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+export const runtime = "nodejs";
+
 import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { NextResponse, type NextRequest } from "next/server";

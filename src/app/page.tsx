@@ -10,9 +10,9 @@ import { UI_MESSAGES } from "@/utils/consts";
 const DEBOUNCE_MS = 1200;
 const COOLDOWN_MS = 30_000;
 
-const MIN_CHARS = 50;
+const MIN_CHARS = 25;
 const BUCKET_SIZE = 125;
-const CHECKPOINTS = [50, 250];
+const CHECKPOINTS = [25, 150];
 const MIN_CALL_INTERVAL_MS = 1500;
 
 const THEME_STORAGE_KEY = "selected-theme-index";
@@ -106,8 +106,10 @@ export default function Home() {
 
       const cooldownPassed = now - lastRequestAtRef.current > COOLDOWN_MS;
 
-      if ((crossedCheckpoint || crossedNewBucket || cooldownPassed) &&
-          now - lastRequestAtRef.current > MIN_CALL_INTERVAL_MS) {
+      if (
+        (crossedCheckpoint || crossedNewBucket || cooldownPassed) &&
+        now - lastRequestAtRef.current > MIN_CALL_INTERVAL_MS
+      ) {
         lastBucketRef.current = bucket;
         doTranslateFetch(currentText);
       }

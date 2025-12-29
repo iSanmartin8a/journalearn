@@ -48,7 +48,7 @@ ${JSON.stringify(UI_MESSAGES, null, 2)}
 let response;
 try {
   response = await generateText({
-    model: openai("gpt-5-mini-2025-08-07"),
+    model: openai("gpt-5.2-2025-12-11"),
     system: WEB_PROMPTS.TRANSLATE_WEB_PROMPT,
     prompt: userPrompt,
     temperature: 0.2,

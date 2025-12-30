@@ -13,7 +13,6 @@ const TARGET = 400;
 
 const THEME_STORAGE_KEY = "selected-theme-index";
 const DRAFT_STORAGE_KEY = "journal-text";
-const RESULT_STORAGE_KEY = "journal-result";
 const ENTRIES_STORAGE_KEY = "journal-entries";
 const STREAK_STORAGE_KEY = "journal-days";
 
@@ -27,6 +26,7 @@ export default function Home() {
   const [uiMessages, setUiMessages] = useState<any>(UI_MESSAGES);
   const [correctionResult, setCorrectionResult] = useState<any | null>(null);
   const [sentToday, setSentToday] = useState(false);
+  const [streak, setStreak] = useState(0);
 
   const hasCalledAt25Ref = useRef(false);
   const saveTimeoutRef = useRef<number | null>(null);
@@ -35,9 +35,7 @@ export default function Home() {
   useEffect(() => {
     (async () => {
       const savedTheme = await storage.get<number>(THEME_STORAGE_KEY);
-      if (typeof savedTheme === "number") {
-        setThemeIndex(savedTheme);
-      }
+      if (typeof savedTheme === "number") setThemeIndex(savedTheme);
     })();
   }, []);
 
@@ -51,29 +49,30 @@ export default function Home() {
 
   const rotateTheme = () => setThemeIndex((prev) => (prev + 1) % THEMES.length);
 
-  /* ♻️ Restaurar draft y resultado */
+  /* ♻️ Restaurar draft, resultado y racha */
   useEffect(() => {
     (async () => {
+      const today = todayKey();
+
+      // Draft
       const savedText = await storage.get<string>(DRAFT_STORAGE_KEY);
       if (savedText) {
         setText(savedText);
-        if (savedText.length >= MIN_CHARS) {
-          hasCalledAt25Ref.current = true;
-        }
+        if (savedText.length >= MIN_CHARS) hasCalledAt25Ref.current = true;
       }
 
-      const savedResult = await storage.get<any>(RESULT_STORAGE_KEY);
-      if (savedResult) {
-        const entryDate = savedResult?.date || todayKey();
-        if (entryDate === todayKey()) {
-          setCorrectionResult(savedResult);
-          setSentToday(true);
-        } else {
-          // resultado antiguo, limpiar
-          setCorrectionResult(null);
-          setSentToday(false);
-        }
+      // Entradas guardadas
+      const entries =
+        (await storage.get<Record<string, any>>(ENTRIES_STORAGE_KEY)) ?? {};
+      const todayEntry = entries[today];
+      if (todayEntry) {
+        setCorrectionResult(todayEntry.result);
+        setSentToday(true);
       }
+
+      // Racha
+      const days = (await storage.get<string[]>(STREAK_STORAGE_KEY)) ?? [];
+      setStreak(days.length);
     })();
   }, []);
 
@@ -131,15 +130,15 @@ export default function Home() {
         days.sort();
         await storage.set(STREAK_STORAGE_KEY, days);
       }
+      setStreak(days.length);
 
       // limpiar draft
       await storage.remove(DRAFT_STORAGE_KEY);
       hasCalledAt25Ref.current = false;
       setText("");
 
-      // guardar y mostrar resultado
-      await storage.set(RESULT_STORAGE_KEY, { ...result, date: today });
-      setCorrectionResult({ ...result, date: today });
+      // mostrar resultado
+      setCorrectionResult(result);
       setSentToday(true);
     },
     [text]
@@ -160,7 +159,7 @@ export default function Home() {
       <div className="mb-8 cursor-pointer select-none" onClick={rotateTheme}>
         <Title title={uiMessages.TITLE} tooltip={uiMessages.TOOLTIP} />
 
-        <div className="mt-2 flex justify-center">
+        <div className="mt-2 flex justify-center items-center gap-2">
           <div className="w-[14ch]">
             <div className="h-1 bg-[var(--theme-placeholder)] rounded overflow-hidden">
               <div
@@ -169,6 +168,13 @@ export default function Home() {
               />
             </div>
           </div>
+
+          {/* Badge con la racha */}
+          {streak > 0 && (
+            <div className="ml-2 px-2 py-0.5 rounded-full bg-[var(--theme-valid)] text-black text-xs font-semibold">
+              🔥 {streak} {streak === 1 ? "día" : "días"}
+            </div>
+          )}
         </div>
       </div>
 

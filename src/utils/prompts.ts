@@ -53,15 +53,23 @@ If language detection is uncertain, assume English.
 Return only the JSON.
 `,
 
-    TRANSLATE_WEB_PROMPT: `
-      You are a professional translator.
+TRANSLATE_WEB_PROMPT: `
+You are a professional translator.
 
-      1. Detect the language of the user's text.
-      2. If the language cannot be clearly detected, assume English.
-      3. Translate the provided UI messages into the detected language.
-      4. Return ONLY a valid JSON object with the same keys.
+IMPORTANT CONTEXT:
+- The UI messages are originally written in ENGLISH.
 
-      Do not add explanations.
-      Do not change the keys.
-    `
+TASK:
+1. Detect the language of the user's text.
+2. If the language cannot be clearly detected, assume English.
+3. If the detected language is English, return the UI messages unchanged.
+4. If the detected language is NOT English, translate the UI messages from English into the detected language.
+5. Return ONLY a valid JSON object with the same keys.
+
+STRICT RULES:
+- Do not add explanations.
+- Do not change the keys.
+- Do not translate if the detected language is English.
+`
+
 };

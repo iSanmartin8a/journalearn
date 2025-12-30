@@ -20,15 +20,17 @@ type InputProps = {
     OR: string;
     PROCESSING?: string;
   };
+  initialValue?: string;
   onSubmitResult?: (result: any) => void;
 };
 
 export default function Input({
   onTextChange,
   uiMessages,
+  initialValue,
   onSubmitResult,
 }: InputProps) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(initialValue ?? "");
   const [labelText, setLabelText] = useState(
     uiMessages?.LABEL ?? "Write your message below."
   );
@@ -57,6 +59,11 @@ export default function Input({
     () => setGoodStatic(uiMessages?.GOOD ?? "All good! ✅"),
     [uiMessages?.GOOD]
   );
+  useEffect(() => {
+    if (initialValue !== undefined) {
+      setValue(initialValue);
+    }
+  }, [initialValue]);
 
   async function handleSubmit() {
     if (!isValid || loading) return;

@@ -6,150 +6,154 @@ import Input from "@/components/Input/Input";
 import Title from "@/components/Title/Title";
 import Result from "@/components/Result/Result";
 import { UI_MESSAGES } from "@/utils/consts";
-
-const DEBOUNCE_MS = 1200;
-const COOLDOWN_MS = 30_000;
+import { storage } from "@/utils/indexed";
 
 const MIN_CHARS = 25;
-const BUCKET_SIZE = 125;
-const CHECKPOINTS = [25, 150];
-const MIN_CALL_INTERVAL_MS = 1500;
+const TARGET = 400;
 
 const THEME_STORAGE_KEY = "selected-theme-index";
+const DRAFT_STORAGE_KEY = "journal-text";
+const RESULT_STORAGE_KEY = "journal-result";
+
 const THEMES = ["theme-default", "theme-night"];
 
 export default function Home() {
-  const [themeIndex, setThemeIndex] = useState(() => {
-    if (typeof window === "undefined") return 0;
-    const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    const parsed = saved ? Number(saved) : 0;
-    return parsed >= 0 && parsed < THEMES.length ? parsed : 0;
-  });
+  const [themeIndex, setThemeIndex] = useState(0);
   const [text, setText] = useState("");
   const [uiMessages, setUiMessages] = useState<any>(UI_MESSAGES);
   const [correctionResult, setCorrectionResult] = useState<any | null>(null);
 
-  const debounceRef = useRef<number | null>(null);
-  const lastBucketRef = useRef(0);
-  const lastRequestAtRef = useRef(0);
-  const pendingFetchControllerRef = useRef<AbortController | null>(null);
-  const prevLenRef = useRef(0);
+  // control del checkpoint
+  const hasCalledAt25Ref = useRef(false);
+  const saveTimeoutRef = useRef<number | null>(null);
 
-  /* 🎨 Aplicar tema al <html> */
+  /* 🎨 Tema */
+  useEffect(() => {
+    (async () => {
+      const savedTheme = await storage.get<number>(THEME_STORAGE_KEY);
+      if (typeof savedTheme === "number") {
+        setThemeIndex(savedTheme);
+      }
+    })();
+  }, []);
+
   useEffect(() => {
     const html = document.documentElement;
     THEMES.forEach((t) => html.classList.remove(t));
     html.classList.add(THEMES[themeIndex]);
-  }, [themeIndex]);
-
-  useEffect(() => {
-    localStorage.setItem(THEME_STORAGE_KEY, String(themeIndex));
+    storage.set(THEME_STORAGE_KEY, themeIndex);
   }, [themeIndex]);
 
   const rotateTheme = () => {
     setThemeIndex((prev) => (prev + 1) % THEMES.length);
   };
 
-  /* 🌍 Llamada de traducción segura con AbortController */
-  const doTranslateFetch = useCallback(async (currentText: string) => {
-    const now = Date.now();
-    if (pendingFetchControllerRef.current) {
-      // abortar cualquier llamada pendiente
-      pendingFetchControllerRef.current.abort();
+  /* ♻️ Restaurar draft + resultado */
+  useEffect(() => {
+    (async () => {
+      const savedText = await storage.get<string>(DRAFT_STORAGE_KEY);
+      if (savedText) {
+        setText(savedText);
+        if (savedText.length >= MIN_CHARS) {
+          hasCalledAt25Ref.current = true;
+        }
+      }
+
+      const savedResult = await storage.get<any>(RESULT_STORAGE_KEY);
+      if (savedResult) {
+        setCorrectionResult(savedResult);
+      }
+    })();
+  }, []);
+
+  /* 💾 Guardar resultado */
+  useEffect(() => {
+    if (correctionResult) {
+      storage.set(RESULT_STORAGE_KEY, correctionResult);
+    } else {
+      storage.remove(RESULT_STORAGE_KEY);
     }
-    if (now - lastRequestAtRef.current < MIN_CALL_INTERVAL_MS) return;
+  }, [correctionResult]);
 
-    const controller = new AbortController();
-    pendingFetchControllerRef.current = controller;
-
+  /* 🌍 translate_web */
+  const doTranslateFetch = useCallback(async (currentText: string) => {
     try {
       const res = await fetch("/api/translate_web", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: currentText }),
-        signal: controller.signal,
       });
       const data = await res.json();
       if (data?.ui) setUiMessages(data.ui);
-      lastRequestAtRef.current = Date.now();
-    } catch (err: any) {
-      if (err.name === "AbortError") return; // llamada cancelada
+    } catch (err) {
       console.error("translate fetch error", err);
-    } finally {
-      // limpiar el controlador actual
-      pendingFetchControllerRef.current = null;
     }
   }, []);
 
-  /* Evalúa si llamar ahora (cruces de checkpoints o buckets) */
-  const evaluateAndMaybeFetchImmediate = useCallback(
-    (currentText: string) => {
-      const len = currentText.length;
-      const prev = prevLenRef.current;
-      const now = Date.now();
-
-      if (len < MIN_CHARS) {
-        lastBucketRef.current = 0;
-        if (pendingFetchControllerRef.current) {
-          pendingFetchControllerRef.current.abort();
-          pendingFetchControllerRef.current = null;
-        }
-        return;
-      }
-
-      const crossedCheckpoint = CHECKPOINTS.some(
-        (cp) => prev < cp && len >= cp
-      );
-
-      const bucket = Math.floor(len / BUCKET_SIZE);
-      const crossedNewBucket = bucket > lastBucketRef.current;
-
-      const cooldownPassed = now - lastRequestAtRef.current > COOLDOWN_MS;
-
-      if (
-        (crossedCheckpoint || crossedNewBucket || cooldownPassed) &&
-        now - lastRequestAtRef.current > MIN_CALL_INTERVAL_MS
-      ) {
-        lastBucketRef.current = bucket;
-        doTranslateFetch(currentText);
-      }
-    },
-    [doTranslateFetch]
-  );
-
-  /* Debounce de "reposo" */
-  const scheduleDebouncedEvaluation = useCallback(
-    (currentText: string) => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = window.setTimeout(() => {
-        if (currentText.length >= MIN_CHARS) {
-          doTranslateFetch(currentText);
-        }
-      }, DEBOUNCE_MS);
-    },
-    [doTranslateFetch]
-  );
-
-  /* Efecto que reacciona al texto en tiempo real */
+  /* 🧠 Checkpoint 25 + autosave */
   useEffect(() => {
     const len = text.length;
-    evaluateAndMaybeFetchImmediate(text);
-    scheduleDebouncedEvaluation(text);
-    prevLenRef.current = len;
-  }, [text, evaluateAndMaybeFetchImmediate, scheduleDebouncedEvaluation]);
+
+    // rearme
+    if (len < MIN_CHARS) {
+      hasCalledAt25Ref.current = false;
+    }
+
+    // cruce por 25
+    if (len >= MIN_CHARS && !hasCalledAt25Ref.current) {
+      hasCalledAt25Ref.current = true;
+      doTranslateFetch(text);
+    }
+
+    // autosave debounce
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = window.setTimeout(() => {
+      storage.set(DRAFT_STORAGE_KEY, text);
+    }, 500);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [text, doTranslateFetch]);
+
+  const percent = Math.min(100, Math.round((text.length / TARGET) * 100));
 
   return (
     <div className="min-h-screen bg-[var(--theme-background)] text-[var(--theme-label)] transition-colors duration-500 flex flex-col items-center justify-around p-8">
       <div className="mb-8 cursor-pointer select-none" onClick={rotateTheme}>
         <Title title={uiMessages.TITLE} tooltip={uiMessages.TOOLTIP} />
+
+        {/* Progress bar tipo subrayado */}
+        <div className="mt-2 flex justify-center">
+          <div className="w-[14ch]">
+            <div className="h-1 bg-[var(--theme-placeholder)] rounded overflow-hidden">
+              <div
+                className="h-full rounded transition-all duration-300"
+                style={{
+                  width: `${percent}%`,
+                  background:
+                    text.length >= TARGET
+                      ? "var(--theme-valid)"
+                      : "var(--theme-button-background)",
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="w-full max-w-2xl">
         {!correctionResult ? (
           <Input
+            initialValue={text}
             onTextChange={setText}
             uiMessages={uiMessages}
-            onSubmitResult={(res) => setCorrectionResult(res)}
+            onSubmitResult={setCorrectionResult}
           />
         ) : (
           <Result result={correctionResult} />

@@ -14,20 +14,24 @@ const TARGET = 400;
 const THEME_STORAGE_KEY = "selected-theme-index";
 const DRAFT_STORAGE_KEY = "journal-text";
 const RESULT_STORAGE_KEY = "journal-result";
+const ENTRIES_STORAGE_KEY = "journal-entries";
+const STREAK_STORAGE_KEY = "journal-days";
 
 const THEMES = ["theme-default", "theme-night"];
+
+const todayKey = () => new Date().toISOString().slice(0, 10);
 
 export default function Home() {
   const [themeIndex, setThemeIndex] = useState(0);
   const [text, setText] = useState("");
   const [uiMessages, setUiMessages] = useState<any>(UI_MESSAGES);
   const [correctionResult, setCorrectionResult] = useState<any | null>(null);
+  const [sentToday, setSentToday] = useState(false);
 
-  // control del checkpoint
   const hasCalledAt25Ref = useRef(false);
   const saveTimeoutRef = useRef<number | null>(null);
 
-  /* 🎨 Tema */
+  /* 🎨 Restaurar tema */
   useEffect(() => {
     (async () => {
       const savedTheme = await storage.get<number>(THEME_STORAGE_KEY);
@@ -37,6 +41,7 @@ export default function Home() {
     })();
   }, []);
 
+  /* 🎨 Aplicar tema */
   useEffect(() => {
     const html = document.documentElement;
     THEMES.forEach((t) => html.classList.remove(t));
@@ -44,11 +49,9 @@ export default function Home() {
     storage.set(THEME_STORAGE_KEY, themeIndex);
   }, [themeIndex]);
 
-  const rotateTheme = () => {
-    setThemeIndex((prev) => (prev + 1) % THEMES.length);
-  };
+  const rotateTheme = () => setThemeIndex((prev) => (prev + 1) % THEMES.length);
 
-  /* ♻️ Restaurar draft + resultado */
+  /* ♻️ Restaurar draft y resultado */
   useEffect(() => {
     (async () => {
       const savedText = await storage.get<string>(DRAFT_STORAGE_KEY);
@@ -61,19 +64,18 @@ export default function Home() {
 
       const savedResult = await storage.get<any>(RESULT_STORAGE_KEY);
       if (savedResult) {
-        setCorrectionResult(savedResult);
+        const entryDate = savedResult?.date || todayKey();
+        if (entryDate === todayKey()) {
+          setCorrectionResult(savedResult);
+          setSentToday(true);
+        } else {
+          // resultado antiguo, limpiar
+          setCorrectionResult(null);
+          setSentToday(false);
+        }
       }
     })();
   }, []);
-
-  /* 💾 Guardar resultado */
-  useEffect(() => {
-    if (correctionResult) {
-      storage.set(RESULT_STORAGE_KEY, correctionResult);
-    } else {
-      storage.remove(RESULT_STORAGE_KEY);
-    }
-  }, [correctionResult]);
 
   /* 🌍 translate_web */
   const doTranslateFetch = useCallback(async (currentText: string) => {
@@ -94,66 +96,89 @@ export default function Home() {
   useEffect(() => {
     const len = text.length;
 
-    // rearme
-    if (len < MIN_CHARS) {
-      hasCalledAt25Ref.current = false;
-    }
+    if (len < MIN_CHARS) hasCalledAt25Ref.current = false;
 
-    // cruce por 25
     if (len >= MIN_CHARS && !hasCalledAt25Ref.current) {
       hasCalledAt25Ref.current = true;
       doTranslateFetch(text);
     }
 
-    // autosave debounce
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = window.setTimeout(() => {
       storage.set(DRAFT_STORAGE_KEY, text);
     }, 500);
 
     return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
   }, [text, doTranslateFetch]);
 
-  const percent = Math.min(100, Math.round((text.length / TARGET) * 100));
+  /* 📝 Submit final */
+  const handleSubmitResult = useCallback(
+    async (result: any) => {
+      const today = todayKey();
+
+      // guardar entrada
+      const entries =
+        (await storage.get<Record<string, any>>(ENTRIES_STORAGE_KEY)) ?? {};
+      entries[today] = { date: today, text, result, createdAt: Date.now() };
+      await storage.set(ENTRIES_STORAGE_KEY, entries);
+
+      // actualizar racha
+      const days = (await storage.get<string[]>(STREAK_STORAGE_KEY)) ?? [];
+      if (!days.includes(today)) {
+        days.push(today);
+        days.sort();
+        await storage.set(STREAK_STORAGE_KEY, days);
+      }
+
+      // limpiar draft
+      await storage.remove(DRAFT_STORAGE_KEY);
+      hasCalledAt25Ref.current = false;
+      setText("");
+
+      // guardar y mostrar resultado
+      await storage.set(RESULT_STORAGE_KEY, { ...result, date: today });
+      setCorrectionResult({ ...result, date: today });
+      setSentToday(true);
+    },
+    [text]
+  );
+
+  const percent = sentToday
+    ? 100
+    : Math.min(100, Math.round((text.length / TARGET) * 100));
+
+  const progressColor = sentToday
+    ? "var(--theme-valid)"
+    : text.length >= TARGET
+    ? "var(--theme-valid)"
+    : "var(--theme-button-background)";
 
   return (
     <div className="min-h-screen bg-[var(--theme-background)] text-[var(--theme-label)] transition-colors duration-500 flex flex-col items-center justify-around p-8">
       <div className="mb-8 cursor-pointer select-none" onClick={rotateTheme}>
         <Title title={uiMessages.TITLE} tooltip={uiMessages.TOOLTIP} />
 
-        {/* Progress bar tipo subrayado */}
         <div className="mt-2 flex justify-center">
           <div className="w-[14ch]">
             <div className="h-1 bg-[var(--theme-placeholder)] rounded overflow-hidden">
               <div
                 className="h-full rounded transition-all duration-300"
-                style={{
-                  width: `${percent}%`,
-                  background:
-                    text.length >= TARGET
-                      ? "var(--theme-valid)"
-                      : "var(--theme-button-background)",
-                }}
+                style={{ width: `${percent}%`, background: progressColor }}
               />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="w-full max-w-2xl">
-        {!correctionResult ? (
+      <div className="w-full max-w-2xl h-[480px]">
+        {!correctionResult || !sentToday ? (
           <Input
             initialValue={text}
             onTextChange={setText}
             uiMessages={uiMessages}
-            onSubmitResult={setCorrectionResult}
+            onSubmitResult={handleSubmitResult}
           />
         ) : (
           <Result result={correctionResult} />

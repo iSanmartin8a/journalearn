@@ -33,7 +33,6 @@ export default function DayStrip({ journaledDays, entries, uiMessages, onDayResu
 
   useEffect(() => {
     if (!toast) return;
-    lastToastRef.current = toast;
     const t = setTimeout(() => setToast(null), 2500);
     return () => clearTimeout(t);
   }, [toast]);
@@ -54,12 +53,13 @@ export default function DayStrip({ journaledDays, entries, uiMessages, onDayResu
     if (hasEntry) {
       onDayResult(entries[key].result, key);
     } else {
+      lastToastRef.current = uiMessages.DAY_NO_JOURNAL;
       setToast(uiMessages.DAY_NO_JOURNAL);
     }
   }
 
   return (
-    <div className="relative flex flex-col items-center sm:items-end gap-2">
+    <div className="relative flex flex-col items-center sm:items-end gap-2 animate-fadein">
       {/* Toast */}
       <div
         className="absolute -top-7 left-1/2 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-0 z-20 pointer-events-none transition-opacity duration-300"

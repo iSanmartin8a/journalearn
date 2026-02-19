@@ -224,7 +224,7 @@ export default function Home() {
 
             {/* Progress + streak */}
             <div className="flex items-center gap-3">
-              <div className="w-20 sm:w-28 h-0.5 rounded-full overflow-hidden" style={{ background: "var(--theme-border)" }}>
+              <div className="h-0.5 rounded-full overflow-hidden font-mono" style={{ width: "11ch", background: "var(--theme-border)" }}>
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{ width: `${percent}%`, background: progressColor }}
@@ -248,6 +248,7 @@ export default function Home() {
           {/* DayStrip — full width on mobile, right-aligned on desktop */}
           <div className="flex justify-center sm:justify-end sm:pt-1">
             <DayStrip
+              key={themeIndex}
               journaledDays={journaledDays}
               entries={entries}
               uiMessages={uiMessages}

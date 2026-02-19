@@ -18,9 +18,14 @@ module.exports = {
           "0%, 100%": { borderColor: "currentColor" },
           "50%": { borderColor: "transparent" },
         },
+        fadein: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
       },
       animation: {
         typing: "typing 1.5s steps(11, end) forwards, blink 1.2s ease-in-out infinite",
+        fadein: "fadein 0.4s ease-out 0.6s both",
       },
       colors: {
         theme: {

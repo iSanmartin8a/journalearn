@@ -2,151 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--theme-border); border-radius: 99px; }
+
+/* ─── Theme: Default (light) ────────────────────────────── */
 .theme-default {
-  --theme-background: #f8f9fa;
-  --theme-title: #212529;
-  --theme-label: #495057;
-  --theme-placeholder: #6c757d;
-  --theme-invalid: #ff4d4d;
-  --theme-valid: #28a745;
-  --theme-button-background: #212529;
-  --theme-button-text: #E9ECEF;
-  --theme-tooltip-background: #212529;
-  --theme-tooltip-text: #E9ECEF;
+  --theme-background:   #f5f4f0;
+  --theme-surface:      #ffffff;
+  --theme-border:       #e2e0da;
+  --theme-title:        #1a1917;
+  --theme-label:        #3d3b36;
+  --theme-placeholder:  #a09e97;
+  --theme-invalid:      #e5484d;
+  --theme-valid:        #30a46c;
+  --theme-button-background: #1a1917;
+  --theme-button-text:  #f5f4f0;
+  --theme-tooltip-background: #1a1917;
+  --theme-tooltip-text: #f5f4f0;
+  --theme-glow:         rgba(48, 164, 108, 0.15);
 }
 
+/* ─── Theme: Night (dark) ───────────────────────────────── */
 .theme-night {
-  --theme-background: #212529;
-  --theme-title: #f8f9fa;
-  --theme-label: #495057;
-  --theme-placeholder: #6c757d;
-  --theme-invalid: #ff4d4d;
-  --theme-valid: #28a745;
-  --theme-button-text: #212529;
-  --theme-button-background: #E9ECEF;
-  --theme-tooltip-text: #212529;
-  --theme-tooltip-background: #E9ECEF;
+  --theme-background:   #111110;
+  --theme-surface:      #1c1c1a;
+  --theme-border:       #2a2a27;
+  --theme-title:        #eeeeec;
+  --theme-label:        #b5b3ad;
+  --theme-placeholder:  #63635e;
+  --theme-invalid:      #e5484d;
+  --theme-valid:        #30a46c;
+  --theme-button-background: #eeeeec;
+  --theme-button-text:  #111110;
+  --theme-tooltip-background: #eeeeec;
+  --theme-tooltip-text: #111110;
+  --theme-glow:         rgba(48, 164, 108, 0.12);
 }
 
+/* ─── Theme: Ocean ──────────────────────────────────────── */
 .theme-ocean {
-  --theme-background: #001d3d;
-  --theme-title: #f8f9fa;
-  --theme-label: #e9ecef;
-  --theme-placeholder: #e9ecef;
-  --theme-invalid: #ff4d4d;
-  --theme-valid: #28a745;
-  --theme-button-text: #212529;
-  --theme-button-background: #E9ECEF;
-  --theme-tooltip-text: #212529;
-  --theme-tooltip-background: #E9ECEF;
-}
-
-/* 🌤️ Sand — claro, calmado */
-.theme-sand {
-  --theme-bg: #e9ecef;
-  --theme-title: #141619;
-  --theme-label: #2b2e34;
-  --theme-placeholder: #6c757d;
-  --theme-invalid: #d64545;
-  --theme-valid: #2f9e44;
-  --theme-button: #d6b885;
-}
-
-/* 🌑 Night — oscuro elegante */
-.theme-night {
-  --theme-bg: #141619;
-  --theme-title: #e9ecef;
-  --theme-label: #cfd3da;
-  --theme-placeholder: #8a8f98;
-  --theme-invalid: #ff6b6b;
-  --theme-valid: #51cf66;
-  --theme-button: #fdf0d5;
-}
-
-/* 🌿 Forest — natural */
-.theme-forest {
-  --theme-bg: #0f1f17;
-  --theme-title: #e6f4ea;
-  --theme-label: #b7d1c3;
-  --theme-placeholder: #7fa38d;
-  --theme-invalid: #f87171;
-  --theme-valid: #4ade80;
-  --theme-button: #22c55e;
-}
-
-/* 🌌 Cosmic — creativo */
-.theme-cosmic {
-  --theme-bg: #0b0d17;
-  --theme-title: #e0e7ff;
-  --theme-label: #c7d2fe;
-  --theme-placeholder: #818cf8;
-  --theme-invalid: #fb7185;
-  --theme-valid: #38bdf8;
-  --theme-button: #6366f1;
-}
-
-/* 🌅 Sunrise — cálido */
-.theme-sunrise {
-  --theme-bg: #fff3e0;
-  --theme-title: #4e342e;
-  --theme-label: #6d4c41;
-  --theme-placeholder: #a1887f;
-  --theme-invalid: #e53935;
-  --theme-valid: #43a047;
-  --theme-button: #ffb74d;
-}
-
-/* ❄️ Frost — frío y limpio */
-.theme-frost {
-  --theme-bg: #f1f5f9;
-  --theme-title: #0f172a;
-  --theme-label: #334155;
-  --theme-placeholder: #64748b;
-  --theme-invalid: #ef4444;
-  --theme-valid: #22c55e;
-  --theme-button: #38bdf8;
-}
-
-/* 🌸 Sakura — suave */
-.theme-sakura {
-  --theme-bg: #fff1f2;
-  --theme-title: #881337;
-  --theme-label: #9d174d;
-  --theme-placeholder: #c026d3;
-  --theme-invalid: #be123c;
-  --theme-valid: #16a34a;
-  --theme-button: #fb7185;
-}
-
-/* 🧪 Neon — moderno */
-.theme-neon {
-  --theme-bg: #020617;
-  --theme-title: #e0f2fe;
-  --theme-label: #7dd3fc;
-  --theme-placeholder: #38bdf8;
-  --theme-invalid: #f43f5e;
-  --theme-valid: #4ade80;
-  --theme-button: #22d3ee;
-}
-
-/* 📜 Vintage — retro */
-.theme-vintage {
-  --theme-bg: #f5f1e8;
-  --theme-title: #3e2723;
-  --theme-label: #5d4037;
-  --theme-placeholder: #8d6e63;
-  --theme-invalid: #c62828;
-  --theme-valid: #2e7d32;
-  --theme-button: #d7a86e;
-}
-
-/* 🪐 Aurora — etéreo */
-.theme-aurora {
-  --theme-bg: #0a0f1e;
-  --theme-title: #e0f2fe;
-  --theme-label: #bae6fd;
-  --theme-placeholder: #7dd3fc;
-  --theme-invalid: #fb7185;
-  --theme-valid: #5eead4;
-  --theme-button: #818cf8;
+  --theme-background:   #060d1f;
+  --theme-surface:      #0d1a35;
+  --theme-border:       #1a2d52;
+  --theme-title:        #e8edf8;
+  --theme-label:        #9aaac8;
+  --theme-placeholder:  #4a5a7a;
+  --theme-invalid:      #f16a70;
+  --theme-valid:        #34d399;
+  --theme-button-background: #3b82f6;
+  --theme-button-text:  #ffffff;
+  --theme-tooltip-background: #1e3a6e;
+  --theme-tooltip-text: #e8edf8;
+  --theme-glow:         rgba(52, 211, 153, 0.12);
 }

@@ -8,4 +8,6 @@ export const UI_MESSAGES = {
     SUBMIT: "Submit",
     SHORTCUT: "Press Ctrl + Enter",
     OR: "Or",
+    DAY_NO_JOURNAL: "No journal entry for this day",
+    DAY_PAST_RESULT_TITLE: "Entry from",
 };

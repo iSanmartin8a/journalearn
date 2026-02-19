@@ -124,73 +124,97 @@ export default function Input({
   const processingMessage = uiMessages?.PROCESSING ?? "Processing...";
 
   return (
-    <div className="grid w-full gap-3">
-      <Label htmlFor="message" className="text-[var(--theme-label)]">
+    <div className="flex flex-col gap-4 w-full">
+      {/* Label */}
+      <label
+        htmlFor="message"
+        className="text-sm font-medium"
+        style={{ color: "var(--theme-label)" }}
+      >
         <RandomReveal text={labelText} speed={10} />
-      </Label>
+      </label>
 
-      <Textarea
+      {/* Textarea */}
+      <textarea
         id="message"
         placeholder={uiMessages?.PLACEHOLDER ?? "Type your message here."}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         disabled={loading}
-        className={`
-          !h-60 bg-[var(--theme-background)] text-[var(--theme-label)] placeholder:text-[var(--theme-placeholder)]
-          border ${
-            isValid
-              ? "border-[var(--theme-valid)]"
-              : "border-[var(--theme-invalid)]"
-          }
-        `}
+        rows={7}
+        className="w-full resize-none rounded-xl px-4 py-3 text-sm leading-relaxed outline-none transition-all duration-200 disabled:opacity-50 sm:rows-9"
+        style={{
+          background: "transparent",
+          border: "1px solid var(--theme-border)",
+          color: "var(--theme-label)",
+          caretColor: "var(--theme-valid)",
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = isValid
+            ? "var(--theme-valid)"
+            : "var(--theme-placeholder)";
+          e.currentTarget.style.boxShadow = isValid
+            ? "0 0 0 3px var(--theme-glow)"
+            : "none";
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = "var(--theme-border)";
+          e.currentTarget.style.boxShadow = "none";
+        }}
       />
 
-      {/* Contador y mensaje — siempre visible */}
-      <div
-        className={`flex justify-between items-center text-sm ${
-          isValid ? "text-[var(--theme-valid)]" : "text-[var(--theme-invalid)]"
-        }`}
-      >
-        <div className="flex-1">
-          <RandomReveal text={isValid ? goodStatic : helperStatic} speed={18} />
+      {/* Footer row */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        {/* Status + counter */}
+        <div className="flex items-center gap-3 min-w-0">
+          <span
+            className="text-xs transition-colors duration-300 truncate"
+            style={{ color: isValid ? "var(--theme-valid)" : "var(--theme-placeholder)" }}
+          >
+            <RandomReveal text={isValid ? goodStatic : helperStatic} speed={18} />
+          </span>
+          <span
+            className="text-xs font-mono tabular-nums flex-shrink-0 transition-colors duration-300"
+            style={{ color: isValid ? "var(--theme-valid)" : "var(--theme-placeholder)" }}
+          >
+            {value.length}/{minLength}
+          </span>
         </div>
 
-        <div className="ml-4 flex-shrink-0 font-mono">
-          {value.length}/{minLength}
+        {/* Submit area */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0">
+          <span className="text-xs" style={{ color: "var(--theme-placeholder)" }}>
+            {uiMessages?.SHORTCUT ?? "Ctrl + Enter"}
+          </span>
+          <span className="text-xs hidden sm:block" style={{ color: "var(--theme-placeholder)" }}>
+            {uiMessages?.OR?.toLowerCase() ?? "or"}
+          </span>
+          <Button
+            onClick={handleSubmit}
+            disabled={!isValid || loading}
+            size="sm"
+            className="flex items-center gap-2 rounded-lg text-xs font-semibold px-4 py-2 transition-all duration-200 disabled:opacity-40"
+            style={{
+              background: "var(--theme-button-background)",
+              color: "var(--theme-button-text)",
+            }}
+          >
+            {loading ? (
+              <>
+                <Spinner />
+                {processingMessage}
+              </>
+            ) : (
+              uiMessages?.SUBMIT ?? "Submit"
+            )}
+          </Button>
         </div>
       </div>
 
       {error && (
-        <div className="text-sm text-[var(--theme-invalid)] mt-1">{error}</div>
+        <p className="text-xs" style={{ color: "var(--theme-invalid)" }}>{error}</p>
       )}
-
-      {/* Mensaje de atajo y botón */}
-      <div className="flex flex-row items-center justify-end mt-2 gap-1 text-[var(--theme-title)]">
-        <span className="text-xs text-[var(--theme-title)]">
-          {uiMessages?.SHORTCUT ?? "Press Ctrl + Enter"}
-        </span>
-
-        <span className="text-xs text-[var(--theme-title)] opacity-70">
-          {uiMessages?.OR.toLowerCase() ?? "or"}
-        </span>
-
-        <Button
-          onClick={handleSubmit}
-          disabled={!isValid || loading}
-          size="sm"
-          className="flex items-center gap-2 bg-[var(--theme-button-background)] text-[var(--theme-button-text)] hover:opacity-90"
-        >
-          {loading ? (
-            <>
-              <Spinner />
-              {processingMessage}
-            </>
-          ) : (
-            uiMessages?.SUBMIT ?? "Submit"
-          )}
-        </Button>
-      </div>
     </div>
   );
 }

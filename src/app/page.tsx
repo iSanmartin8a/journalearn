@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Input from "@/components/Input/Input";
 import Title from "@/components/Title/Title";
 import Result from "@/components/Result/Result";
+import DayStrip from "@/components/DayStrip/DayStrip";
 import { UI_MESSAGES } from "@/utils/consts";
 import { storage } from "@/utils/indexed";
 
@@ -20,6 +21,29 @@ const THEMES = ["theme-default", "theme-night", "theme-ocean"];
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
+function calcStreak(days: string[]): number {
+  if (days.length === 0) return 0;
+  const sorted = [...days].sort();
+  const today = todayKey();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+  const last = sorted[sorted.length - 1];
+  if (last !== today && last !== yesterdayStr) return 0;
+  let streak = 1;
+  for (let i = sorted.length - 1; i > 0; i--) {
+    const curr = new Date(sorted[i]);
+    const prev = new Date(sorted[i - 1]);
+    const diff = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
+    if (diff === 1) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
 export default function Home() {
   const [themeIndex, setThemeIndex] = useState(0);
   const [text, setText] = useState("");
@@ -27,9 +51,13 @@ export default function Home() {
   const [correctionResult, setCorrectionResult] = useState<any | null>(null);
   const [sentToday, setSentToday] = useState(false);
   const [streak, setStreak] = useState(0);
+  const [journaledDays, setJournaledDays] = useState<Set<string>>(new Set());
+  const [entries, setEntries] = useState<Record<string, any>>({});
+  const [pastResult, setPastResult] = useState<{ result: any; date: string } | null>(null);
 
   const hasCalledAt25Ref = useRef(false);
   const saveTimeoutRef = useRef<number | null>(null);
+  const doTranslateFetchRef = useRef<(t: string) => void>(() => { });
 
   /* 🎨 Restaurar tema */
   useEffect(() => {
@@ -64,6 +92,8 @@ export default function Home() {
       // Entradas guardadas
       const entries =
         (await storage.get<Record<string, any>>(ENTRIES_STORAGE_KEY)) ?? {};
+      setEntries(entries);
+      setJournaledDays(new Set(Object.keys(entries)));
       const todayEntry = entries[today];
       if (todayEntry) {
         setCorrectionResult(todayEntry.result);
@@ -72,7 +102,7 @@ export default function Home() {
 
       // Racha
       const days = (await storage.get<string[]>(STREAK_STORAGE_KEY)) ?? [];
-      setStreak(days.length);
+      setStreak(calcStreak(days));
     })();
   }, []);
 
@@ -91,15 +121,19 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    doTranslateFetchRef.current = doTranslateFetch;
+  }, [doTranslateFetch]);
+
   /* 🧠 Checkpoint 25 + autosave */
   useEffect(() => {
     const len = text.length;
 
-    if (len < MIN_CHARS) hasCalledAt25Ref.current = false;
-
-    if (len >= MIN_CHARS && !hasCalledAt25Ref.current) {
+    if (len < MIN_CHARS) {
+      hasCalledAt25Ref.current = false;
+    } else if (!hasCalledAt25Ref.current) {
       hasCalledAt25Ref.current = true;
-      doTranslateFetch(text);
+      doTranslateFetchRef.current(text);
     }
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -110,7 +144,7 @@ export default function Home() {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [text, doTranslateFetch]);
+  }, [text]);
 
   /* 📝 Submit final */
   const handleSubmitResult = useCallback(
@@ -122,15 +156,24 @@ export default function Home() {
         (await storage.get<Record<string, any>>(ENTRIES_STORAGE_KEY)) ?? {};
       entries[today] = { date: today, text, result, createdAt: Date.now() };
       await storage.set(ENTRIES_STORAGE_KEY, entries);
+      setEntries({ ...entries });
+      setJournaledDays(new Set(Object.keys(entries)));
 
       // actualizar racha
-      const days = (await storage.get<string[]>(STREAK_STORAGE_KEY)) ?? [];
+      let days = (await storage.get<string[]>(STREAK_STORAGE_KEY)) ?? [];
       if (!days.includes(today)) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayKey = yesterday.toISOString().slice(0, 10);
+        const lastDay = days.length > 0 ? days[days.length - 1] : null;
+        if (lastDay !== null && lastDay !== yesterdayKey && lastDay !== today) {
+          days = [];
+        }
         days.push(today);
         days.sort();
         await storage.set(STREAK_STORAGE_KEY, days);
       }
-      setStreak(days.length);
+      setStreak(calcStreak(days));
 
       // limpiar draft
       await storage.remove(DRAFT_STORAGE_KEY);
@@ -151,45 +194,118 @@ export default function Home() {
   const progressColor = sentToday
     ? "var(--theme-valid)"
     : text.length >= TARGET
-    ? "var(--theme-valid)"
-    : "var(--theme-button-background)";
+      ? "var(--theme-valid)"
+      : "var(--theme-button-background)";
 
   return (
-    <div className="min-h-screen bg-[var(--theme-background)] text-[var(--theme-label)] transition-colors duration-500 flex flex-col items-center justify-around p-8">
-      <div className="mb-8 cursor-pointer select-none" onClick={rotateTheme}>
-        <Title title={uiMessages.TITLE} tooltip={uiMessages.TOOLTIP} />
+    <div
+      className="min-h-screen transition-colors duration-500 flex flex-col items-center justify-center sm:p-8"
+      style={{ background: "var(--theme-background)" }}
+    >
+      <div
+        className="w-full max-w-2xl flex flex-col gap-5 sm:rounded-2xl p-5 sm:p-8 transition-colors duration-500 min-h-screen sm:min-h-0"
+        style={{
+          background: "var(--theme-surface)",
+          borderLeft: "none",
+          borderRight: "none",
+          borderTop: "none",
+          borderBottom: "none",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 24px rgba(0,0,0,0.04)",
+        }}
+      >
+        {/* ── Header ── */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          {/* Left: title + progress */}
+          <div
+            className="flex flex-row items-center justify-between sm:flex-col sm:items-start sm:gap-2 cursor-pointer select-none"
+            onClick={rotateTheme}
+          >
+            <Title title={uiMessages.TITLE} tooltip={uiMessages.TOOLTIP} />
 
-        <div className="mt-2 flex justify-center items-center gap-2">
-          <div className="w-[14ch]">
-            <div className="h-1 bg-[var(--theme-placeholder)] rounded overflow-hidden">
-              <div
-                className="h-full rounded transition-all duration-300"
-                style={{ width: `${percent}%`, background: progressColor }}
-              />
+            {/* Progress + streak */}
+            <div className="flex items-center gap-3">
+              <div className="w-20 sm:w-28 h-0.5 rounded-full overflow-hidden" style={{ background: "var(--theme-border)" }}>
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${percent}%`, background: progressColor }}
+                />
+              </div>
+              {streak > 0 && (
+                <span
+                  className="text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded-full"
+                  style={{
+                    background: "var(--theme-glow)",
+                    color: "var(--theme-valid)",
+                    border: "1px solid var(--theme-valid)",
+                  }}
+                >
+                  🔥 {streak}
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Badge con la racha */}
-          {streak > 0 && (
-            <div className="ml-2 px-2 py-0.5 rounded-full bg-[var(--theme-valid)] text-black text-xs font-semibold">
-              🔥 {streak} {streak === 1 ? "día" : "días"}
-            </div>
+          {/* DayStrip — full width on mobile, right-aligned on desktop */}
+          <div className="flex justify-center sm:justify-end sm:pt-1">
+            <DayStrip
+              journaledDays={journaledDays}
+              entries={entries}
+              uiMessages={uiMessages}
+              onDayResult={(result, date) => setPastResult({ result, date })}
+            />
+          </div>
+        </div>
+
+        {/* ── Divider ── */}
+        <div className="h-px" style={{ background: "var(--theme-border)" }} />
+
+        {/* ── Main content ── */}
+        <div className="w-full">
+          {!correctionResult || !sentToday ? (
+            <Input
+              initialValue={text}
+              onTextChange={setText}
+              uiMessages={uiMessages}
+              onSubmitResult={handleSubmitResult}
+            />
+          ) : (
+            <Result result={correctionResult} />
           )}
         </div>
       </div>
 
-      <div className="w-full max-w-2xl h-[480px]">
-        {!correctionResult || !sentToday ? (
-          <Input
-            initialValue={text}
-            onTextChange={setText}
-            uiMessages={uiMessages}
-            onSubmitResult={handleSubmitResult}
-          />
-        ) : (
-          <Result result={correctionResult} />
-        )}
-      </div>
+      {/* ── Past day result overlay ── */}
+      {pastResult && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
+          style={{ background: "color-mix(in srgb, var(--theme-background) 80%, transparent)" }}
+          onClick={() => setPastResult(null)}
+        >
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-auto sm:rounded-2xl rounded-t-2xl p-5 sm:p-6"
+            style={{
+              background: "var(--theme-surface)",
+              border: "1px solid var(--theme-border)",
+              boxShadow: "0 8px 40px rgba(0,0,0,0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-medium tracking-wide uppercase" style={{ color: "var(--theme-placeholder)" }}>
+                {uiMessages.DAY_PAST_RESULT_TITLE} · {pastResult.date}
+              </span>
+              <button
+                onClick={() => setPastResult(null)}
+                className="w-7 h-7 flex items-center justify-center rounded-full text-xs transition-opacity hover:opacity-60"
+                style={{ color: "var(--theme-placeholder)", border: "1px solid var(--theme-border)" }}
+              >
+                ✕
+              </button>
+            </div>
+            <Result result={pastResult.result} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,15 +10,17 @@ module.exports = {
     extend: {
       keyframes: {
         typing: {
-          "0%": { width: "0" },
-          "100%": { width: "14ch" },
+          "0%": { width: "0", opacity: "0" },
+          "5%": { opacity: "1" },
+          "100%": { width: "11ch", opacity: "1" },
         },
         blink: {
+          "0%, 100%": { borderColor: "currentColor" },
           "50%": { borderColor: "transparent" },
         },
       },
       animation: {
-        typing: "typing 2.6s steps(14) forwards, blink 1s step-end infinite",
+        typing: "typing 1.5s steps(11, end) forwards, blink 1.2s ease-in-out infinite",
       },
       colors: {
         theme: {

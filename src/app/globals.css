@@ -28,6 +28,19 @@
   --theme-tooltip-background: #E9ECEF;
 }
 
+.theme-ocean {
+  --theme-background: #001d3d;
+  --theme-title: #f8f9fa;
+  --theme-label: #e9ecef;
+  --theme-placeholder: #e9ecef;
+  --theme-invalid: #ff4d4d;
+  --theme-valid: #28a745;
+  --theme-button-text: #212529;
+  --theme-button-background: #E9ECEF;
+  --theme-tooltip-text: #212529;
+  --theme-tooltip-background: #E9ECEF;
+}
+
 /* 🌤️ Sand — claro, calmado */
 .theme-sand {
   --theme-bg: #e9ecef;

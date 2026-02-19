@@ -16,7 +16,7 @@ const DRAFT_STORAGE_KEY = "journal-text";
 const ENTRIES_STORAGE_KEY = "journal-entries";
 const STREAK_STORAGE_KEY = "journal-days";
 
-const THEMES = ["theme-default", "theme-night"];
+const THEMES = ["theme-default", "theme-night", "theme-ocean"];
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
 

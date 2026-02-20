@@ -8,6 +8,7 @@ import Result from "@/components/Result/Result";
 import DayStrip from "@/components/DayStrip/DayStrip";
 import { UI_MESSAGES } from "@/utils/consts";
 import { storage } from "@/utils/indexed";
+import { Analytics } from "@vercel/analytics/next"
 
 const MIN_CHARS = 25;
 const TARGET = 400;
@@ -378,6 +379,8 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      <Analytics/>
     </div>
   );
 }

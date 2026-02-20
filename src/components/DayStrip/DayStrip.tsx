@@ -15,8 +15,10 @@ type DayStripProps = {
   onDayResult: (result: unknown, date: string) => void;
 };
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
 function getDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
 function getDayLabel(date: Date): string {
@@ -42,7 +44,7 @@ export default function DayStrip({ journaledDays, entries, uiMessages, onDayResu
   const todayKey = getDateKey(today);
 
   const days: Date[] = [];
-  for (let i = -3; i <= 3; i++) {
+  for (let i = -5; i <= 1; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
     days.push(d);
@@ -51,7 +53,13 @@ export default function DayStrip({ journaledDays, entries, uiMessages, onDayResu
   function handleClick(d: Date, key: string, isFuture: boolean, hasEntry: boolean) {
     if (isFuture || key === todayKey) return;
     if (hasEntry) {
-      onDayResult(entries[key].result, key);
+      const entry = entries[key];
+      if (entry) {
+        onDayResult(entry.result, key);
+      } else {
+        lastToastRef.current = uiMessages.DAY_NO_JOURNAL;
+        setToast(uiMessages.DAY_NO_JOURNAL);
+      }
     } else {
       lastToastRef.current = uiMessages.DAY_NO_JOURNAL;
       setToast(uiMessages.DAY_NO_JOURNAL);

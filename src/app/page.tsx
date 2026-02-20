@@ -19,7 +19,18 @@ const STREAK_STORAGE_KEY = "journal-days";
 
 const THEMES = ["theme-default", "theme-night", "theme-ocean"];
 
-const todayKey = () => new Date().toISOString().slice(0, 10);
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+function getLocalDateKey(date: Date): string {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
+function parseLocalDateKey(key: string): Date {
+  const [y, m, d] = key.split("-").map((v) => Number(v));
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+}
+
+const todayKey = () => getLocalDateKey(new Date());
 
 function calcStreak(days: string[]): number {
   if (days.length === 0) return 0;
@@ -27,13 +38,13 @@ function calcStreak(days: string[]): number {
   const today = todayKey();
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+  const yesterdayStr = getLocalDateKey(yesterday);
   const last = sorted[sorted.length - 1];
   if (last !== today && last !== yesterdayStr) return 0;
   let streak = 1;
   for (let i = sorted.length - 1; i > 0; i--) {
-    const curr = new Date(sorted[i]);
-    const prev = new Date(sorted[i - 1]);
+    const curr = parseLocalDateKey(sorted[i]);
+    const prev = parseLocalDateKey(sorted[i - 1]);
     const diff = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
     if (diff === 1) {
       streak++;
@@ -90,11 +101,19 @@ export default function Home() {
       }
 
       // Entradas guardadas
-      const entries =
+      const rawEntries =
         (await storage.get<Record<string, any>>(ENTRIES_STORAGE_KEY)) ?? {};
-      setEntries(entries);
-      setJournaledDays(new Set(Object.keys(entries)));
-      const todayEntry = entries[today];
+
+      const normalizedEntries: Record<string, any> = {};
+      for (const [key, value] of Object.entries(rawEntries)) {
+        const dateKey = value?.date ?? key;
+        normalizedEntries[dateKey] = value;
+      }
+
+      setEntries(normalizedEntries);
+      setJournaledDays(new Set(Object.keys(normalizedEntries)));
+
+      const todayEntry = normalizedEntries[today] ?? rawEntries[today];
       if (todayEntry) {
         setCorrectionResult(todayEntry.result);
         setSentToday(true);
@@ -103,6 +122,53 @@ export default function Home() {
       // Racha
       const days = (await storage.get<string[]>(STREAK_STORAGE_KEY)) ?? [];
       setStreak(calcStreak(days));
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    const params = new URLSearchParams(window.location.search);
+    const seed = params.get("seed");
+    if (!seed) return;
+
+    (async () => {
+      const existing = (await storage.get<Record<string, any>>(ENTRIES_STORAGE_KEY)) ?? {};
+      if (Object.keys(existing).length > 0 && seed !== "force") return;
+
+      const mkKey = (offsetDays: number) => {
+        const d = new Date();
+        d.setDate(d.getDate() - offsetDays);
+        return getLocalDateKey(d);
+      };
+
+      const makeEntry = (date: string, score: number) => ({
+        date,
+        text: `Seed entry for ${date}`,
+        createdAt: Date.now(),
+        result: {
+          language: "en",
+          score,
+          corrected_html: `<p><strong>Seed</strong> correction for <em>${date}</em>.</p>`,
+          overall_feedback: "Seeded feedback to test past-day overlay.",
+        },
+      });
+
+      const seeded: Record<string, any> = {
+        [mkKey(3)]: makeEntry(mkKey(3), 6),
+        [mkKey(2)]: makeEntry(mkKey(2), 7),
+        [mkKey(1)]: makeEntry(mkKey(1), 8),
+      };
+
+      await storage.set(ENTRIES_STORAGE_KEY, seeded);
+
+      const days = Object.keys(seeded).sort();
+      await storage.set(STREAK_STORAGE_KEY, days);
+
+      setEntries(seeded);
+      setJournaledDays(new Set(Object.keys(seeded)));
+      setStreak(calcStreak(days));
+      setCorrectionResult(null);
+      setSentToday(false);
     })();
   }, []);
 
@@ -156,15 +222,20 @@ export default function Home() {
         (await storage.get<Record<string, any>>(ENTRIES_STORAGE_KEY)) ?? {};
       entries[today] = { date: today, text, result, createdAt: Date.now() };
       await storage.set(ENTRIES_STORAGE_KEY, entries);
-      setEntries({ ...entries });
-      setJournaledDays(new Set(Object.keys(entries)));
+      const normalizedEntries: Record<string, any> = {};
+      for (const [key, value] of Object.entries(entries)) {
+        const dateKey = value?.date ?? key;
+        normalizedEntries[dateKey] = value;
+      }
+      setEntries(normalizedEntries);
+      setJournaledDays(new Set(Object.keys(normalizedEntries)));
 
       // actualizar racha
       let days = (await storage.get<string[]>(STREAK_STORAGE_KEY)) ?? [];
       if (!days.includes(today)) {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayKey = yesterday.toISOString().slice(0, 10);
+        const yesterdayKey = getLocalDateKey(yesterday);
         const lastDay = days.length > 0 ? days[days.length - 1] : null;
         if (lastDay !== null && lastDay !== yesterdayKey && lastDay !== today) {
           days = [];

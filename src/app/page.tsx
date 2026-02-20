@@ -18,7 +18,7 @@ const DRAFT_STORAGE_KEY = "journal-text";
 const ENTRIES_STORAGE_KEY = "journal-entries";
 const STREAK_STORAGE_KEY = "journal-days";
 
-const THEMES = ["theme-default", "theme-night", "theme-ocean"];
+const THEMES = ["theme-night", "theme-default", "theme-ocean"];
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 

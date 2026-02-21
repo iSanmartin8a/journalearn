@@ -17,18 +17,18 @@ body {
 
 /* ─── Theme: Default (light) ────────────────────────────── */
 .theme-default {
-  --theme-background:   #f5f4f0;
-  --theme-surface:      #ffffff;
-  --theme-border:       #e2e0da;
+  --theme-background:   #f1efe9;
+  --theme-surface:      #faf9f6;
+  --theme-border:       #dedad1;
   --theme-title:        #1a1917;
   --theme-label:        #3d3b36;
   --theme-placeholder:  #a09e97;
   --theme-invalid:      #e5484d;
   --theme-valid:        #30a46c;
   --theme-button-background: #1a1917;
-  --theme-button-text:  #f5f4f0;
+  --theme-button-text:  #f1efe9;
   --theme-tooltip-background: #1a1917;
-  --theme-tooltip-text: #f5f4f0;
+  --theme-tooltip-text: #f1efe9;
   --theme-glow:         rgba(48, 164, 108, 0.15);
 }
 
@@ -64,4 +64,72 @@ body {
   --theme-tooltip-background: #1e3a6e;
   --theme-tooltip-text: #e8edf8;
   --theme-glow:         rgba(52, 211, 153, 0.12);
+}
+
+/* ─── Theme: Forest ─────────────────────────────────────── */
+.theme-forest {
+  --theme-background:   #07140e;
+  --theme-surface:      #0d2319;
+  --theme-border:       #1a3a2a;
+  --theme-title:        #eaf6ef;
+  --theme-label:        #a7c7b3;
+  --theme-placeholder:  #5a7a66;
+  --theme-invalid:      #ff5b66;
+  --theme-valid:        #22c55e;
+  --theme-button-background: #22c55e;
+  --theme-button-text:  #07140e;
+  --theme-tooltip-background: #133826;
+  --theme-tooltip-text: #eaf6ef;
+  --theme-glow:         rgba(34, 197, 94, 0.14);
+}
+
+/* ─── Theme: Sunset ─────────────────────────────────────── */
+.theme-sunset {
+  --theme-background:   #1a0f14;
+  --theme-surface:      #24121b;
+  --theme-border:       #3a1a28;
+  --theme-title:        #fff1f4;
+  --theme-label:        #f3b5c2;
+  --theme-placeholder:  #a9707c;
+  --theme-invalid:      #fb7185;
+  --theme-valid:        #f59e0b;
+  --theme-button-background: #fb7185;
+  --theme-button-text:  #1a0f14;
+  --theme-tooltip-background: #3a1a28;
+  --theme-tooltip-text: #fff1f4;
+  --theme-glow:         rgba(245, 158, 11, 0.14);
+}
+
+/* ─── Theme: Lavender ───────────────────────────────────── */
+.theme-lavender {
+  --theme-background:   #100c1a;
+  --theme-surface:      #1a1426;
+  --theme-border:       #2a1f3d;
+  --theme-title:        #f4f0ff;
+  --theme-label:        #c7b8f3;
+  --theme-placeholder:  #7b6aa8;
+  --theme-invalid:      #fb7185;
+  --theme-valid:        #a78bfa;
+  --theme-button-background: #a78bfa;
+  --theme-button-text:  #100c1a;
+  --theme-tooltip-background: #2a1f3d;
+  --theme-tooltip-text: #f4f0ff;
+  --theme-glow:         rgba(167, 139, 250, 0.16);
+}
+
+/* ─── Theme: Paper ──────────────────────────────────────── */
+.theme-paper {
+  --theme-background:   #f0eee7;
+  --theme-surface:      #f8f6f1;
+  --theme-border:       #d9d3c6;
+  --theme-title:        #1f1e1b;
+  --theme-label:        #45423c;
+  --theme-placeholder:  #9c9487;
+  --theme-invalid:      #e5484d;
+  --theme-valid:        #2f9a62;
+  --theme-button-background: #1f1e1b;
+  --theme-button-text:  #f8f6f1;
+  --theme-tooltip-background: #1f1e1b;
+  --theme-tooltip-text: #f8f6f1;
+  --theme-glow:         rgba(47, 154, 98, 0.14);
 }

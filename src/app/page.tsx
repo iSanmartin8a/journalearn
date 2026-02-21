@@ -18,7 +18,15 @@ const DRAFT_STORAGE_KEY = "journal-text";
 const ENTRIES_STORAGE_KEY = "journal-entries";
 const STREAK_STORAGE_KEY = "journal-days";
 
-const THEMES = ["theme-night", "theme-default", "theme-ocean"];
+const THEMES = [
+  "theme-night",
+  "theme-default",
+  "theme-ocean",
+  "theme-forest",
+  "theme-sunset",
+  "theme-lavender",
+  // "theme-paper",
+];
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -275,7 +283,7 @@ export default function Home() {
       style={{ background: "var(--theme-background)" }}
     >
       <div
-        className="w-full max-w-2xl flex flex-col gap-5 sm:rounded-2xl p-5 sm:p-8 transition-colors duration-500 min-h-screen sm:min-h-0"
+        className="w-full max-w-2xl flex flex-col gap-5 sm:rounded-2xl px-5 py-8 sm:p-8 transition-colors duration-500 min-h-screen sm:min-h-0 justify-between"
         style={{
           background: "var(--theme-surface)",
           borderLeft: "none",
@@ -302,18 +310,20 @@ export default function Home() {
                   style={{ width: `${percent}%`, background: progressColor }}
                 />
               </div>
-              {streak > 0 && (
-                <span
-                  className="text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded-full"
-                  style={{
-                    background: "var(--theme-glow)",
-                    color: "var(--theme-valid)",
-                    border: "1px solid var(--theme-valid)",
-                  }}
-                >
-                  🔥 {streak}
-                </span>
-              )}
+              <span
+                className="text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded-full"
+                style={{
+                  background: "var(--theme-glow)",
+                  color: "var(--theme-valid)",
+                  border: "1px solid var(--theme-valid)",
+                  opacity: streak > 0 ? 1 : 0,
+                  pointerEvents: streak > 0 ? "auto" : "none",
+                  minWidth: "6ch",
+                  textAlign: "center",
+                }}
+              >
+                🔥 {streak}
+              </span>
             </div>
           </div>
 
@@ -333,7 +343,7 @@ export default function Home() {
         <div className="h-px" style={{ background: "var(--theme-border)" }} />
 
         {/* ── Main content ── */}
-        <div className="w-full">
+        <div className="w-full flex-1 flex flex-col justify-center sm:justify-start">
           {!correctionResult || !sentToday ? (
             <Input
               initialValue={text}

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,29 @@ export default function Input({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => onTextChange(value), [value, onTextChange]);
+  const debounceTimerRef = useRef<number | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = window.setTimeout(() => {
+      if (mountedRef.current) {
+        onTextChange(value);
+      }
+    }, 300);
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, [value, onTextChange]);
+
   useEffect(
     () => setLabelText(uiMessages?.LABEL ?? "Write your message below."),
     [uiMessages?.LABEL]
@@ -59,8 +81,14 @@ export default function Input({
     () => setGoodStatic(uiMessages?.GOOD ?? "All good! ✅"),
     [uiMessages?.GOOD]
   );
+
+  const isInitialMount = useRef(true);
   useEffect(() => {
-    if (initialValue !== undefined) {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (initialValue !== undefined && initialValue !== value) {
       setValue(initialValue);
     }
   }, [initialValue]);

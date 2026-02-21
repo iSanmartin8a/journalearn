@@ -19,6 +19,9 @@ type InputProps = {
     SHORTCUT: string;
     OR: string;
     PROCESSING?: string;
+    ERROR_AI_SERVICE?: string;
+    ERROR_SERVICE_EVAL?: string;
+    ERROR_NETWORK?: string;
   };
   initialValue?: string;
   onSubmitResult?: (result: any) => void;
@@ -109,7 +112,7 @@ export default function Input({
 
       if (!res.ok) {
         console.error("check_journal error:", payload);
-        setError(payload?.error ?? "AI service error");
+        setError(payload?.error ?? uiMessages?.ERROR_AI_SERVICE ?? "AI service error");
 
         onSubmitResult?.({
           language: "unknown",
@@ -117,7 +120,7 @@ export default function Input({
           corrected_html: `<p>${value}</p>`,
           paragraph_feedback: [],
           overall_feedback:
-            "The text could not be evaluated due to a service error.",
+            uiMessages?.ERROR_SERVICE_EVAL ?? "The text could not be evaluated due to a service error.",
           __raw: payload,
         });
         return;
@@ -134,7 +137,7 @@ export default function Input({
         score: 0,
         corrected_html: `<p>${value}</p>`,
         paragraph_feedback: [],
-        overall_feedback: "A network error occurred. Please try again.",
+        overall_feedback: uiMessages?.ERROR_NETWORK ?? "A network error occurred. Please try again.",
         __raw: err,
       });
     } finally {

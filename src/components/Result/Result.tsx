@@ -11,9 +11,14 @@ type CorrectionResultProps = {
     paragraph_feedback?: string[];
     overall_feedback?: string;
   } | null;
+  uiMessages?: {
+    RESULT_CORRECTION?: string;
+    RESULT_CORRECTED_ENTRY?: string;
+    RESULT_SCORE_SUFFIX?: string;
+  };
 };
 
-export default function CorrectionResult({ result }: CorrectionResultProps) {
+export default function CorrectionResult({ result, uiMessages }: CorrectionResultProps) {
   if (!result) return null;
 
   const score = result.score ?? 0;
@@ -28,7 +33,7 @@ export default function CorrectionResult({ result }: CorrectionResultProps) {
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-0.5">
           <span className="text-xs font-medium uppercase tracking-widest" style={{ color: "var(--theme-placeholder)" }}>
-            Correction
+            {uiMessages?.RESULT_CORRECTION ?? "Correction"}
           </span>
           {result.language && (
             <span className="text-xs" style={{ color: "var(--theme-placeholder)" }}>
@@ -46,7 +51,7 @@ export default function CorrectionResult({ result }: CorrectionResultProps) {
           }}
         >
           <span className="text-2xl font-bold font-mono leading-none">{score}</span>
-          <span className="text-xs font-medium" style={{ color: "var(--theme-placeholder)" }}>/10</span>
+          <span className="text-xs font-medium" style={{ color: "var(--theme-placeholder)" }}>{uiMessages?.RESULT_SCORE_SUFFIX ?? "/10"}</span>
         </div>
       </div>
 
@@ -56,7 +61,7 @@ export default function CorrectionResult({ result }: CorrectionResultProps) {
       {/* ── Corrected text ── */}
       <div className="flex flex-col gap-2">
         <span className="text-xs font-medium uppercase tracking-widest" style={{ color: "var(--theme-placeholder)" }}>
-          Corrected entry
+          {uiMessages?.RESULT_CORRECTED_ENTRY ?? "Corrected entry"}
         </span>
         <div
           className="max-h-64 overflow-auto rounded-xl px-4 py-3 text-sm leading-relaxed"

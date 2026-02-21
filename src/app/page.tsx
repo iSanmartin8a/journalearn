@@ -141,6 +141,34 @@ export default function Home() {
     if (!seed) return;
 
     (async () => {
+      const today = todayKey();
+
+      // Reset today's entry
+      if (seed === "reset") {
+        const existing = (await storage.get<Record<string, any>>(ENTRIES_STORAGE_KEY)) ?? {};
+        delete existing[today];
+        await storage.set(ENTRIES_STORAGE_KEY, existing);
+        await storage.remove(DRAFT_STORAGE_KEY);
+
+        const normalizedEntries: Record<string, any> = {};
+        for (const [key, value] of Object.entries(existing)) {
+          const dateKey = value?.date ?? key;
+          normalizedEntries[dateKey] = value;
+        }
+
+        setEntries(normalizedEntries);
+        setJournaledDays(new Set(Object.keys(normalizedEntries)));
+        setCorrectionResult(null);
+        setSentToday(false);
+        setText("");
+        hasCalledAt25Ref.current = false;
+
+        const days = (await storage.get<string[]>(STREAK_STORAGE_KEY)) ?? [];
+        setStreak(calcStreak(days));
+        return;
+      }
+
+      // Seed past entries
       const existing = (await storage.get<Record<string, any>>(ENTRIES_STORAGE_KEY)) ?? {};
       if (Object.keys(existing).length > 0 && seed !== "force") return;
 
@@ -352,7 +380,7 @@ export default function Home() {
               onSubmitResult={handleSubmitResult}
             />
           ) : (
-            <Result result={correctionResult} />
+            <Result result={correctionResult} uiMessages={uiMessages} />
           )}
         </div>
       </div>
@@ -385,7 +413,7 @@ export default function Home() {
                 ✕
               </button>
             </div>
-            <Result result={pastResult.result} />
+            <Result result={pastResult.result} uiMessages={uiMessages} />
           </div>
         </div>
       )}

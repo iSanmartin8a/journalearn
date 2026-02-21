@@ -8,6 +8,13 @@ export const UI_MESSAGES = {
     SUBMIT: "Submit",
     SHORTCUT: "Press Ctrl + Enter",
     OR: "Or",
+    PROCESSING: "Processing...",
     DAY_NO_JOURNAL: "No journal entry for this day",
     DAY_PAST_RESULT_TITLE: "Entry from",
+    ERROR_AI_SERVICE: "AI service error",
+    ERROR_SERVICE_EVAL: "The text could not be evaluated due to a service error.",
+    ERROR_NETWORK: "A network error occurred. Please try again.",
+    RESULT_CORRECTION: "Correction",
+    RESULT_CORRECTED_ENTRY: "Corrected entry",
+    RESULT_SCORE_SUFFIX: "/10",
 };
